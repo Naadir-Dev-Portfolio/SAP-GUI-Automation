@@ -1,0 +1,171 @@
+Sub SapScript()
+
+Application.DisplayAlerts = False
+
+    ' Sap Variables
+    Dim SapGui
+    Dim Applic
+    Dim connection
+    Dim session
+    Dim WSHShell
+    Dim fso As Variant
+    
+    ' Sap Credentials
+    Dim Sap_User, Sap_Pass As String
+    
+    ' Non Sap Variables
+    Dim wb As Workbook
+    Dim StartDate, EndDate As String
+
+    Set wb = ThisWorkbook
+        
+    StartDate = Replace(wb.Sheets("Admin").Range("StartDate"), "/", ".")
+    EndDate = Replace(wb.Sheets("Admin").Range("EndDate"), "/", ".")
+    SD = wb.Sheets("Admin").Range("StartDate")
+    ED = wb.Sheets("Admin").Range("EndDate")
+    
+    ' Assign Variables for input into SAP here
+    Sap_User = wb.Sheets("Admin").Range("SAP_User").Value
+    Sap_Pass = wb.Sheets("Admin").Range("SAP_Cred").Value
+    
+     Shell "C:\Program Files (x86)\SAP\FrontEnd\SAPgui\saplogon.exe", vbNormalFocus
+        Set WSHShell = CreateObject("WScript.Shell")
+            Do Until WSHShell.AppActivate("SAP Logon ")
+                Application.Wait Now + TimeValue("0:00:01")
+            Loop
+        Set WSHShell = Nothing
+
+    Set SapGui = GetObject("SAPGUI")
+    Set Applic = SapGui.GetScriptingEngine
+    Set connection = Applic.OpenConnection("PR0 ECC", True) 'Change the text inbetween the quotes to look at your specific
+    'connection name,
+    Set session = connection.Children(0)
+        'This will Log in to SAP
+        session.findById("wnd[0]").maximize
+        
+        session.findById("wnd[0]/usr/txtRSYST-BNAME").Text = Sap_User 'Username_Var
+        session.findById("wnd[0]/usr/pwdRSYST-BCODE").Text = Sap_Pass 'Password_Var
+        session.findById("wnd[0]").sendVKey 0
+        
+        session.findById("wnd[0]/tbar[0]/okcd").Text = "IW37N"
+        session.findById("wnd[0]").sendVKey 0
+        
+
+        session.findById("wnd[0]/usr/tabsTABSTRIP_TABBLOCK1/tabpS_TAB1/ssub%_SUBSCREEN_TABBLOCK1:RI_ORDER_OPERATION_LIST:1100/ctxtS_GEWRK-LOW").Text = "EM*"
+        session.findById("wnd[0]/usr/tabsTABSTRIP_TABBLOCK1/tabpS_TAB1/ssub%_SUBSCREEN_TABBLOCK1:RI_ORDER_OPERATION_LIST:1100/ctxtS_DATUM-LOW").Text = ""
+        session.findById("wnd[0]/usr/chkSP_OFN").SetFocus
+        session.findById("wnd[0]").sendVKey 2
+        
+        ' Order Status
+        session.findById("wnd[0]/usr/chkSP_OFN").Selected = True
+        session.findById("wnd[0]/usr/chkSP_IAR").Selected = True
+        session.findById("wnd[0]/usr/chkSP_MAB").Selected = True
+        session.findById("wnd[0]/usr/chkSP_HIS").Selected = True
+
+        ' Select General/Adminstration Tab
+        session.findById("wnd[0]/usr/tabsTABSTRIP_TABBLOCK1/tabpS_TAB2").Select
+        session.findById("wnd[0]/usr/tabsTABSTRIP_TABBLOCK1/tabpS_TAB2/ssub%_SUBSCREEN_TABBLOCK1:RI_ORDER_OPERATION_LIST:1200/ctxtS_PLNNR-LOW").Text = "SAFBOSX"
+        
+      ' Operation Tab
+        session.findById("wnd[0]/usr/tabsTABSTRIP_TABBLOCK1/tabpS_TAB4").Select
+        session.findById("wnd[0]/usr/tabsTABSTRIP_TABBLOCK1/tabpS_TAB4/ssub%_SUBSCREEN_TABBLOCK1:RI_ORDER_OPERATION_LIST:1400/txtS_VORNR-LOW").Text = "010"
+        
+        ' Date Tab
+        session.findById("wnd[0]/usr/tabsTABSTRIP_TABBLOCK1/tabpS_TAB5").Select
+        session.findById("wnd[0]/usr/tabsTABSTRIP_TABBLOCK1/tabpS_TAB5/ssub%_SUBSCREEN_TABBLOCK1:RI_ORDER_OPERATION_LIST:1500/ctxtS_ISDD-LOW").Text = StartDate
+        session.findById("wnd[0]/usr/tabsTABSTRIP_TABBLOCK1/tabpS_TAB5/ssub%_SUBSCREEN_TABBLOCK1:RI_ORDER_OPERATION_LIST:1500/ctxtS_ISDD-HIGH").Text = EndDate
+
+        ' Misc Tab
+        session.findById("wnd[0]/usr/tabsTABSTRIP_TABBLOCK1/tabpS_TAB9").Select
+        session.findById("wnd[0]/usr/tabsTABSTRIP_TABBLOCK1/tabpS_TAB9/ssub%_SUBSCREEN_TABBLOCK1:RI_ORDER_OPERATION_LIST:1900/ctxtSP_VARI").Text = "/NW_GSR_SUR"
+
+        ' Execute Report
+        session.findById("wnd[0]/tbar[1]/btn[8]").press
+        
+        'Export Data
+        session.findById("wnd[0]/mbar/menu[0]/menu[6]").Select
+        session.findById("wnd[1]/tbar[0]/btn[0]").press
+        session.findById("wnd[1]/usr/subSUBSCREEN_STEPLOOP:SAPLSPO5:0150/sub:SAPLSPO5:0150/radSPOPLI-SELFLAG[0,0]").Select
+        session.findById("wnd[1]/usr/subSUBSCREEN_STEPLOOP:SAPLSPO5:0150/sub:SAPLSPO5:0150/radSPOPLI-SELFLAG[0,0]").SetFocus
+        session.findById("wnd[1]/tbar[0]/btn[0]").press
+        session.findById("wnd[1]/tbar[0]/btn[0]").press
+        
+        ' Find Exported Data
+        For Each w In Workbooks
+            If w.Name Like "Worksheet in Basis (1)*" Then w.Activate
+        Next w
+        
+        Dim targetWorkbook As Workbook
+        Set targetWorkbook = ActiveWorkbook
+            
+        ' Process the found workbook
+        Dim exportPath As String
+        exportPath = ThisWorkbook.Path & "\Export\"
+        exportName = "Work Order Data " & StartDate & ".xlsx"
+    
+        ' Save the workbook
+        targetWorkbook.SaveAs Filename:=exportPath & exportName
+    
+        targetWorkbook.Close SaveChanges:=False
+        Set targetWorkbook = Application.Workbooks.Open(exportPath & exportName)
+    
+        ' Copy column C excluding headers
+        With targetWorkbook.Sheets(1)
+            Dim lastRow As Long
+            lastRow = .Cells(.Rows.Count, "C").End(xlUp).Row
+            .Range("C2:C" & lastRow).Copy
+        End With
+        
+        ' Return to SAP:
+        session.findById("wnd[0]/tbar[0]/btn[15]").press
+        session.findById("wnd[0]/tbar[0]/btn[15]").press
+        
+        ' Enter T-Code
+        session.findById("wnd[0]/tbar[0]/okcd").Text = "ZIW47"
+        session.findById("wnd[0]").sendVKey 0
+        
+        ' Enter SO numbers using Paste Function:
+        session.findById("wnd[0]/usr/btn%_AUFNR_O_%_APP_%-VALU_PUSH").press
+        session.findById("wnd[1]/tbar[0]/btn[24]").press
+        session.findById("wnd[1]/tbar[0]/btn[8]").press
+        
+        ' Enter Dates:
+        session.findById("wnd[0]/usr/ctxtERSDA_C-LOW").Text = StartDate
+        session.findById("wnd[0]/usr/ctxtERSDA_C-HIGH").Text = EndDate
+        
+        ' Reason for Variance:
+        session.findById("wnd[0]/usr/ctxtGRUND_C-LOW").Text = "CO*"
+        ' Layout
+        session.findById("wnd[0]/usr/ctxtVARIANT").Text = "/NL VAC"
+        
+        ' Execute
+        session.findById("wnd[0]/tbar[1]/btn[8]").press
+        
+        'Export Data
+            
+        session.findById("wnd[0]/mbar/menu[0]/menu[6]").Select
+        session.findById("wnd[1]/tbar[0]/btn[0]").press
+        session.findById("wnd[1]/usr/subSUBSCREEN_STEPLOOP:SAPLSPO5:0150/sub:SAPLSPO5:0150/radSPOPLI-SELFLAG[0,0]").Select
+        session.findById("wnd[1]/usr/subSUBSCREEN_STEPLOOP:SAPLSPO5:0150/sub:SAPLSPO5:0150/radSPOPLI-SELFLAG[0,0]").SetFocus
+        session.findById("wnd[1]/tbar[0]/btn[0]").press
+        session.findById("wnd[1]/tbar[0]/btn[0]").press
+        
+        targetWorkbook.Close False 'Get rid of Previous SAP Export
+    
+        For Each w In Workbooks
+            If w.Name Like "Worksheet in Basis (1)*" Then w.Activate
+        Next w
+        
+        Set targetWorkbook = ActiveWorkbook
+        
+           ' Process the found workbook
+        outputName = Format(SD, "yyyy.mm.dd") & " - " & Format(ED, "yyyy.mm.dd") & ".xlsx"
+        Debug.Print (outputName)
+        ' Save the workbook
+        'targetWorkbook.SaveAs Filename:="https://cadentgasltd.sharepoint.com/sites/BusSvc/CustCent/CCMITeam/PowerBI/Datasets/CCMI/CCMIPBDS942_BOA%20SAP%20Jobs/" & outputName, FileFormat:=51
+        
+        'targetWorkbook.Close False
+        
+
+        
+End Sub

@@ -1,0 +1,21 @@
+# Excel
+*.xlsm
+*.xlsb
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Backups
+*_backup.*
