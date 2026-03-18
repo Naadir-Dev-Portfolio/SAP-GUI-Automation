@@ -1,0 +1,14 @@
+{
+  "section": "excelvba",
+  "category": "vba-macros",
+  "n": 3,
+  "title": "SAP GUI Automation",
+  "desc": "SAP GUI scripting templates using VBA — automates standard SAP transactions, data pulls and form submissions.",
+  "code": "https://github.com/Naadir-Dev-Portfolio/SAP-GUI-Automation",
+  "details": "https://github.com/Naadir-Dev-Portfolio/SAP-GUI-Automation/blob/main/README.md",
+  "tags": [
+    "vba",
+    "sap",
+    "automation"
+  ]
+}
